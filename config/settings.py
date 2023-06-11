@@ -129,3 +129,12 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ]
 }
+
+MARK_VALUE=["Joy",
+            "Excitement",
+            "Gratitude",
+            "Pride",
+            "Optimism",
+            "Contentment",
+            "Love"
+]

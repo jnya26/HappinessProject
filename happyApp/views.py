@@ -12,6 +12,7 @@ from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from rest_framework.authtoken.models import Token
+from config import settings
 
 
 # Create your views here.
@@ -80,6 +81,7 @@ class User(views.APIView):
 
 
 class Happy(views.APIView):
+    MARK_VALUE_NUMERIC = [1, 2, 3, 4, 5, 6, 7]
     def get_or_404(self, user_id):
         try:
             user = UserModel.objects.get(id=user_id)
@@ -93,19 +95,21 @@ class Happy(views.APIView):
         user = self.get_or_404(user_id=user_id)
         serializer = HappySterializer(data=request.data)
         if serializer.is_valid():
-            day = str(datetime.today().strftime('%Y-%m-%d'))
-            day_in_db = HappyModel.objects.filter(day=day, user_id=user).exists()
-            if day_in_db:
-                return Response('You have been calculated on this day')
-            else:
-                serializer.save(user_id=user)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            if serializer.validated_data['mood_mark'] in self.MARK_VALUE_NUMERIC:
+                day = str(datetime.today().strftime('%Y-%m-%d'))
+                day_in_db = HappyModel.objects.filter(day=day, user_id=user).exists()
+                if day_in_db:
+                    return Response('You have been calculated on this day')
+                else:
+                    serializer.save(user_id=user)
+                    value= round(serializer.data['mood_mark']) - 1
+                    return Response(settings.MARK_VALUE[value], status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    """GET/http://127.0.0.1:8000/user/<id>/happiness - get your avarage mood for all period(using id) and save in db"""
+    """GET/http://127.0.0.1:8000/user/<id>/happiness - get your average mood for all period(using id) and save in db"""
 
-    def put(self, request, user_id):
+    def get(self, request, user_id):
         user = self.get_or_404(user_id=user_id)
         instence = HappyModel.objects.filter(user_id=user)
         print(instence)
@@ -113,10 +117,10 @@ class Happy(views.APIView):
             average_mark = instence.aggregate(Avg('mood_mark'))['mood_mark__avg']
             user.avarage_mood_mark = average_mark
             serializer = UserMoodSterializer(data={'avarage_mood_mark': user.avarage_mood_mark}, instance=user)
-
             if serializer.is_valid():
                 serializer.save()
-                return Response(average_mark, status=status.HTTP_200_OK)
+                average_mark=round(average_mark)-1
+                return Response(settings.MARK_VALUE[average_mark], status=status.HTTP_200_OK)
 
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -204,12 +208,17 @@ class TeamMoodMark(views.APIView):
         team = self.get_or_404(id=id)
         users = UserModel.objects.filter(team_id=team.id)
         instense = users.aggregate(Avg('avarage_mood_mark'))['avarage_mood_mark__avg']
-        # print(instense)
+        print(instense)
         team.team_mood_rate = instense
         serializer = TeamMoodSterializer(data={'team_mood_rate': team.team_mood_rate}, instance=team)
         if serializer.is_valid():
             serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            if instense is not None:
+                value = round(instense) - 1
+                print(value)
+                return Response(settings.MARK_VALUE[value], status=status.HTTP_200_OK)
+            else:
+                return Response('Teammembers did not put happiness yet.')
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -221,8 +230,11 @@ class TeamsMoodMark(views.APIView):
     def get(self, request):
         teams = TeamsModel.objects.all()
         instense = teams.aggregate(Avg('team_mood_rate'))['team_mood_rate__avg']
-        print(instense)
-        return Response(instense, status=status.HTTP_200_OK)
+        if instense is not None:
+            value = round(instense) - 1
+            return Response(settings[value], status=status.HTTP_200_OK)
+        else:
+            return Response("Happiness for all team is empty")
 
 
 class SuperuserOnlyPermission(BasePermission):
