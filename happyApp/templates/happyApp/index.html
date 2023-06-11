@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+registration:
+<br>
+<form method="POST" action="{% url 'create_user' %}">
+    {% csrf_token %}
+
+    <h2>Create User</h2>
+<!--    <form id="create-user-form">-->
+        <input type="text" name="name" placeholder="Name">
+        <input type="email" name="email" placeholder="Email">
+        <button type="submit">Create</button>
+<!--    </form>-->
+</form>>
+
+</body>
+</html>
